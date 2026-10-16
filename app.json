@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "SobrMate",
+    "slug": "komorebi-recovery",
+    "version": "1.0.0",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "icon": "./assets/icon.png",
+    "scheme": "komorebi",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#FAF9F6",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.komorebi.recovery"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FAF9F6"
+      },
+      "package": "com.komorebi.recovery"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-asset",
+      "expo-secure-store",
+      "expo-notifications",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow SobrMate to unlock your private journey with Face ID."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FAF9F6",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 88,
+          "dark": {
+            "backgroundColor": "#17171D"
+          }
+        }
+      ],
+      "expo-sharing"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -1,0 +1,31 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {recordDailyCheckIn,RecoveryData} from '../src/data/recovery';
+import {decodeRecoveryData} from '../src/data/schema';
+import {initialUserSettings} from '../src/data/initialData';
+import {getTrackingUnit} from '../src/data/tracking';
+import {calendarStatistics} from '../src/utils/calendar';
+import {Habit} from '../src/data/types';
+const habit:Habit={id:'nicotine',title:'A clear breath',category:'substance',quitDate:'2026-10-01T10:00:00Z',createdAt:'2026-10-01T10:00:00Z',accentColor:'#6758B5',iconName:'Leaf',pledge:'Presence',longestStreakDays:0,resetsCount:0,financialTracking:{enabled:true,costPerDay:8,currency:'USD'},timeTracking:{enabled:true,hoursPerDaySaved:1},trackingMetric:'count',trackingUnit:'cigarettes'};
+const data:RecoveryData={habits:[habit],activeHabitId:habit.id,checkIns:[],pledges:[],settings:initialUserSettings,hasCompletedOnboarding:true};
+const now=new Date('2026-10-13T12:00:00Z');
+test('renamed habit quantities survive storage and historical edits without resetting the timer',()=>{
+ assert.equal(getTrackingUnit(habit),'cigarettes');
+ const unknown=recordDailyCheckIn(data,habit.id,'relapsed',3,'Unknown count',now,'2026-10-11');
+ const logged=recordDailyCheckIn(unknown.data,habit.id,'relapsed',3,'Three cigarettes',now,'2026-10-12',false,undefined,3);
+ const clean=recordDailyCheckIn(logged.data,habit.id,'struggled',4,'Urges, no use',now,'2026-10-13',false,undefined,0);
+ const restored=decodeRecoveryData(JSON.stringify({version:2,data:clean.data}));
+ assert.equal(restored.habits[0].quitDate,habit.quitDate);
+ assert.equal(restored.checkIns.find(c=>c.date==='2026-10-12')?.quantity,3);
+ const stats=calendarStatistics(restored.checkIns,habit,'2026-10-01','2026-10-13','2026-10-13');
+ assert.equal(stats.knownQuantity,3);assert.equal(stats.unknownQuantities,1);assert.equal(stats.zeroDays,1);assert.equal(stats.moneySaved,8);
+});
+test('habit quantity validation rejects contradictions and impossible daily minutes before writing or restoring',()=>{
+ assert.throws(()=>recordDailyCheckIn(data,habit.id,'clean',1,'',now,undefined,false,undefined,1));
+ assert.throws(()=>recordDailyCheckIn(data,habit.id,'relapsed',3,'',now,undefined,false,undefined,0));
+ assert.throws(()=>recordDailyCheckIn(data,habit.id,'relapsed',3,'',now,undefined,false,undefined,1.5));
+ const minutes={...habit,trackingMetric:'minutes' as const,trackingUnit:'minutes'};
+ assert.throws(()=>recordDailyCheckIn({...data,habits:[minutes]},habit.id,'relapsed',3,'',now,undefined,false,undefined,1441));
+ const good=recordDailyCheckIn({...data,habits:[minutes]},habit.id,'relapsed',3,'',now,'2026-10-12',false,undefined,120);
+ good.data.checkIns[0].quantity=-1;assert.throws(()=>decodeRecoveryData(JSON.stringify(good.data)));
+});
